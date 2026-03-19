@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from core.models import model, vectorizer, classifier
+from core.model import model, vectorizer, classifier
 
 router = APIRouter()
 

@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from schema.data import EmailRequest
-from core.model import classifier, gemini_client
-from core.rules import rule_engine
-from core.agent import run_agent
-import json
+from core.model import classifier
+from core.agent import run_email_agent
 
 router = APIRouter()
+
 
 @router.post("/email")
 def predict_email(request: EmailRequest):
@@ -13,24 +12,39 @@ def predict_email(request: EmailRequest):
     if classifier is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
 
-    result = classifier(request.text)[0]
+    try:
+        # ---------------- MODEL ----------------
+        result = classifier(request.text)[0]
 
-    model_score = result['score']
-    model_label = result['label']
+        model_score = result['score']
+        model_label = result['label']
 
-    rules = rule_engine(request.text)
+        # ---------------- RAW MODEL OUTPUT ----------------
+        raw_response = {
+            "is_phishing": model_label == "spam",
+            "score": round(model_score * 100, 2),
+            "top_features": [
+                {
+                    "feature": "BERT classification",
+                    "impact": round(model_score, 4),
+                    "effect": "phishing" if model_label == "spam" else "legitimate"
+                }
+            ]
+        }
 
-    risk_score = model_score * 100 + len(rules) * 5
-    risk_score = min(risk_score, 100)
+        # ---------------- AGENT ----------------
+        agent_output = run_email_agent(
+            email_text=request.text,
+            model_output=raw_response,
+            shap_values=[]   # no shap for email
+        )
 
-    is_phishing = risk_score > 50
+        # ---------------- FALLBACK ----------------
+        if agent_output:
+            return agent_output
 
-    raw_response = {
-        "is_phishing": is_phishing,
-        "score": round(risk_score, 2),
-        "top_features": rules
-    }
+        raw_response["explanation"] = "Fallback: ML model used due to agent failure."
+        return raw_response
 
-    agent_output = run_agent(gemini_client, request.text, raw_response, rules)
-
-    return agent_output if agent_output else raw_response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
