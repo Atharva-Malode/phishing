@@ -1,0 +1,5 @@
+"fastapi[standard]"
+numpy
+python-whois
+transformers
+google-genai
