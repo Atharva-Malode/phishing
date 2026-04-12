@@ -3,3 +3,5 @@ numpy
 python-whois
 transformers
 google-genai
+scikit-learn
+pyzbar

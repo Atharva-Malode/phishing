@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+            padding: 32px;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #111;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #888;
+            transition: background 0.15s, color 0.15s;
+            padding: 0;
+        }
+
+        #clearBtn {
+            display: none;
+        }
+
+        #clearBtn.visible {
+            display: flex;
+        }
+
+        .icon-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .icon-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .input-area {
+            min-height: 120px;
+            max-height: 240px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            overflow-y: auto;
+            word-break: break-all;
+            background: #fafafa;
+        }
+
+        .input-area:focus {
+            border-color: #4a90d9;
+            box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.1);
+            background: #fff;
+        }
+
+        .input-area:empty::before {
+            content: attr(data-placeholder);
+            color: #999;
+            pointer-events: none;
+        }
+
+        .input-area img {
+            max-width: 100%;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .input-area:has(img) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background: #111;
+            color: #fff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #333;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .result.safe {
+            background: #f0faf0;
+            color: #1a7a1a;
+            display: block;
+            border: 1px solid #c8e6c8;
+        }
+
+        .result.phishing {
+            background: #fef2f2;
+            color: #b91c1c;
+            display: block;
+            border: 1px solid #fecaca;
+        }
+
+        #imageInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phishing Detector</h1>
+
+        <div class="input-wrapper">
+            <div class="input-header">
+                <span class="input-label">Input</span>
+                <div class="input-actions">
+                    <button class="icon-btn" id="uploadBtn" title="Upload image">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="clearBtn" title="Clear">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="input-area" id="inputArea" contenteditable="true" data-placeholder="Paste text or an image here..."></div>
+        </div>
+
+        <input type="file" id="imageInput" accept="image/*">
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="analyzeBtn" disabled>
+                Analyze
+            </button>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const inputArea = document.getElementById('inputArea');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const imageInput = document.getElementById('imageInput');
+        const result = document.getElementById('result');
+
+        let currentType = null;
+        let currentImageData = null;
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        const URL_REGEX = /^(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[\w./?%-]*)*$/i;
+
+        function detectInputType(text) {
+            if (URL_REGEX.test(text.trim()) && !text.includes('\n')) {
+                return 'link';
+            }
+            return 'email';
+        }
+
+        inputArea.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const items = e.clipboardData.items;
+
+            for (const item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    handleImage(item.getAsFile());
+                    return;
+                }
+            }
+
+            const text = e.clipboardData.getData('text/plain');
+            if (text.trim()) handleText(text.trim());
+        });
+
+        inputArea.addEventListener('input', () => {
+            const img = inputArea.querySelector('img');
+            const text = inputArea.textContent.trim();
+
+            if (img) {
+                currentType = 'image';
+            } else if (text) {
+                currentType = 'text';
+            } else {
+                currentType = null;
+            }
+            updateState();
+        });
+
+        uploadBtn.addEventListener('click', () => imageInput.click());
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImage(file);
+                imageInput.value = '';
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            inputArea.innerHTML = '';
+            currentType = null;
+            currentImageData = null;
+            updateState();
+            // result.style.display = 'none';
+            result.className = 'result';
+        });
+
+        function handleText(text) {
+            currentType = 'text';
+            currentImageData = null;
+            inputArea.textContent = text;
+            updateState();
+        }
+
+        function handleImage(file) {
+            currentType = 'image';
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImageData = e.target.result;
+                inputArea.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                inputArea.appendChild(img);
+                updateState();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateState() {
+            analyzeBtn.disabled = !currentType;
+            clearBtn.classList.toggle('visible', !!currentType);
+        }
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (!currentType) return;
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+            // result.style.display = 'none';
+            result.className = 'result';
+
+            try {
+                let endpoint, body;
+
+                if (currentType === 'image') {
+                    endpoint = 'http://localhost:8000/image';
+                    body = JSON.stringify({ image: currentImageData });
+                } else {
+                    const text = inputArea.textContent.trim();
+                    const detected = detectInputType(text);
+                    endpoint = detected === 'link'
+                        ? 'http://localhost:8000/link'
+                        : 'http://localhost:8000/email';
+                    body = detected === 'link'
+                        ? JSON.stringify({ url: text })
+                        : JSON.stringify({ text });
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body,
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => null);
+                    throw new Error(err?.detail || 'Backend error');
+                }
+
+                const data = await response.json();
+                console.log("API RESPONSE:", data);
+
+                if (currentType === 'image') {
+                    const categoryLabels = {
+                        qr: 'QR Code',
+                        qr_with_text: 'QR + Text',
+                        text: 'Text',
+                        graphics: 'Graphics',
+                    };
+                    const category = data.category || 'graphics';
+                    let html = `<strong>Image: ${categoryLabels[category] || category}</strong>`;
+                    if (data.qr_content) {
+                        html += `<div style="margin-top:8px"><strong>QR Content:</strong> <code style="word-break:break-all">${escapeHtml(data.qr_content)}</code></div>`;
+                    }
+                    if (data.ocr_text) {
+                        html += `<div style="margin-top:8px"><strong>Extracted Text:</strong> ${escapeHtml(data.ocr_text)}</div>`;
+                    }
+                    result.className = 'result safe';
+                    result.innerHTML = html;
+                } else {
+                    const score = Math.min(100, Math.max(0, data.score ?? 0));
+                    result.className = `result ${data.is_phishing ? 'phishing' : 'safe'}`;
+                    result.innerHTML =
+                        `<strong>${data.is_phishing ? '⚠ Phishing Detected' : '✓ Safe'}</strong> — ${score}% risk` +
+                        (data.explanation ? `<div style="margin-top:8px;opacity:0.85">${escapeHtml(data.explanation)}</div>` : '');
+                }
+            } catch (err) {
+                result.className = 'result phishing';
+                result.textContent = `Error: ${err.message}`;
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze';
+            }
+        });
+    </script>
+</body>
+</html>
