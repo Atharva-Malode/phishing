@@ -6,6 +6,9 @@ import cv2
 from PIL import Image
 import io
 import pytesseract
+import urllib.parse
+from core.model import model, vectorizer, classifier
+from core.agent import run_link_agent, run_email_agent
 
 router = APIRouter()
 
@@ -13,9 +16,9 @@ router = APIRouter()
 pytesseract.pytesseract.tesseract_cmd = r"C:/Program Files/Tesseract-OCR/tesseract.exe"
 
 
+# ---------------- UTIL: BASE64 DECODE ----------------
 def decode_base64_image(base64_str: str):
     try:
-        # 🔥 Remove base64 prefix if present
         if "," in base64_str:
             base64_str = base64_str.split(",")[1]
 
@@ -27,21 +30,20 @@ def decode_base64_image(base64_str: str):
         raise ValueError("Invalid base64 image")
 
 
+# ---------------- UTIL: QR DETECTION ----------------
 def detect_qr(image):
     try:
         detector = cv2.QRCodeDetector()
         data, bbox, _ = detector.detectAndDecode(image)
 
         if bbox is not None and data:
-            return {
-                "type": "qr",
-                "data": data.strip()
-            }
+            return data.strip()
         return None
     except Exception:
         return None
 
 
+# ---------------- UTIL: OCR ----------------
 def detect_text(image):
     try:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -52,50 +54,135 @@ def detect_text(image):
         text = pytesseract.image_to_string(gray)
 
         cleaned = text.strip()
-        if len(cleaned) > 10:  # threshold to avoid noise
-            return {
-                "type": "text",
-                "data": cleaned
-            }
+        if len(cleaned) > 10:  # avoid noise
+            return cleaned
         return None
+
     except Exception:
         return None
 
 
+# ---------------- UTIL: URL CHECK ----------------
+def is_url(text: str):
+    try:
+        text = text.strip()
+        parsed = urllib.parse.urlparse(text if "://" in text else "http://" + text)
+        return bool(parsed.netloc)
+    except Exception:
+        return False
+
+
+# ---------------- MAIN ROUTE ----------------
 @router.post("/image")
 def analyze_image(request: ImageRequest):
     try:
         image = decode_base64_image(request.image)
 
-        qr_result = detect_qr(image)
-        text_result = detect_text(image)
+        qr_data = detect_qr(image)
+        text_data = detect_text(image)
 
-        # 🔥 Combine results (important)
-        if qr_result and text_result:
-            return {
-                "category": "qr_with_text",
-                "qr_content": qr_result["data"],
-                "ocr_text": text_result["data"]
+        # =========================
+        # CASE 1: QR DETECTED
+        # =========================
+        if qr_data:
+
+            # ---------- QR is URL ----------
+            if is_url(qr_data):
+
+                if model is None or vectorizer is None:
+                    raise HTTPException(status_code=500, detail="Link model not loaded")
+
+                parsed = urllib.parse.urlparse(
+                    qr_data if "://" in qr_data else "http://" + qr_data
+                )
+                domain = parsed.netloc or parsed.path.split('/')[0]
+
+                if domain.startswith("www."):
+                    domain = domain[4:]
+
+                tfidf = vectorizer.transform([domain])
+                pred = model.predict(tfidf)[0]
+                prob = model.predict_proba(tfidf)[0][1]
+
+                raw_response = {
+                    "is_phishing": bool(pred == 1),
+                    "score": round(prob * 100, 2),
+                    "top_features": []
+                }
+
+                agent_output = run_link_agent(
+                    url=qr_data,
+                    domain_age=None,
+                    model_output=raw_response,
+                    shap_values=[]
+                )
+
+                return {
+                    "category": "qr",
+                    "qr_content": qr_data,
+                    "analysis": agent_output or raw_response
+                }
+
+            # ---------- QR is TEXT ----------
+            else:
+
+                if classifier is None:
+                    raise HTTPException(status_code=500, detail="Email model not loaded")
+
+                result = classifier(qr_data)[0]
+
+                raw_response = {
+                    "is_phishing": result["label"] == "spam",
+                    "score": round(result["score"] * 100, 2),
+                    "top_features": []
+                }
+
+                agent_output = run_email_agent(
+                    email_text=qr_data,
+                    model_output=raw_response,
+                    shap_values=[]
+                )
+
+                return {
+                    "category": "qr",
+                    "qr_content": qr_data,
+                    "analysis": agent_output or raw_response
+                }
+
+        # =========================
+        # CASE 2: TEXT IMAGE
+        # =========================
+        if text_data:
+
+            if classifier is None:
+                raise HTTPException(status_code=500, detail="Email model not loaded")
+
+            result = classifier(text_data)[0]
+
+            raw_response = {
+                "is_phishing": result["label"] == "spam",
+                "score": round(result["score"] * 100, 2),
+                "top_features": []
             }
 
-        if qr_result:
-            return {
-                "category": "qr",
-                "qr_content": qr_result["data"],
-                "ocr_text": None
-            }
+            agent_output = run_email_agent(
+                email_text=text_data,
+                model_output=raw_response,
+                shap_values=[]
+            )
 
-        if text_result:
             return {
                 "category": "text",
-                "qr_content": None,
-                "ocr_text": text_result["data"]
+                "ocr_text": text_data,
+                "analysis": agent_output or raw_response
             }
 
+        # =========================
+        # CASE 3: GRAPHICS
+        # =========================
         return {
             "category": "graphics",
-            "qr_content": None,
-            "ocr_text": None
+            "message": "No QR or readable text detected. Likely an infographic or plain image."
         }
 
     except ValueError as ve:

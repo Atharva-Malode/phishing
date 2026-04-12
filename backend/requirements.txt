@@ -5,3 +5,7 @@ transformers
 google-genai
 scikit-learn
 pyzbar
+torch
+pytesseract
+opencv-python
+pillow
