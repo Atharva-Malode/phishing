@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - PhishGuard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f8b500;
+        }
+
+        nav a {
+            text-decoration: none;
+            font-weight: 500;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        nav a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+
+        nav a.active {
+            background: #f8b500;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: white;
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .hero h1 {
+            font-size: 40px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        /* About Section */
+        .about-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .about-section h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 20px;
+        }
+
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .about-text p {
+            color: #555;
+            line-height: 1.8;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        .about-text strong {
+            color: #111;
+        }
+
+        .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .project-highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .highlight-card h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .highlight-card p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* Team Section */
+        .team-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .team-section h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 30px;
+        }
+
+        .team-member {
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .team-member:hover {
+            transform: translateY(-8px);
+        }
+
+        .member-photo {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 16px;
+            background: #f0f0f0;
+            border: 4px solid #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .member-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 6px;
+        }
+
+        .member-role {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .member-bio {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 60px;
+            padding: 30px;
+        }
+
+        footer p {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        footer .institution {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 40px 20px;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            .about-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .project-highlights {
+                grid-template-columns: 1fr;
+            }
+
+            .about-section,
+            .team-section {
+                padding: 24px;
+            }
+
+            .about-section h2,
+            .team-section h2 {
+                font-size: 24px;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .team-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 24px;
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .project-highlights {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">🛡️ PhishGuard</div>
+        <div>
+            <a href="index.html">Detector</a>
+            <a href="about.html" class="active">About Us</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>About PhishGuard</h1>
+            <p>A project dedicated to protecting users from phishing attacks using advanced detection techniques.</p>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="about-section">
+            <h2>Our Project</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p><strong>PhishGuard</strong> is an intelligent phishing detection tool designed to help users identify and protect themselves from phishing attacks. Whether it's suspicious links, deceptive emails, or fraudulent images containing QR codes or text, our system analyzes the content and provides instant risk assessments.</p>
+                    <p>Our mission is to make <span class="highlight">cybersecurity accessible</span> to everyone. We believe that advanced threat detection shouldn't be limited to large enterprises—every user deserves protection.</p>
+                    <p>The project leverages <span class="highlight">machine learning</span> and <span class="highlight">pattern recognition</span> algorithms to detect phishing attempts with high accuracy, helping you stay safe online.</p>
+                </div>
+                <div class="project-highlights">
+                    <div class="highlight-card">
+                        <h3>🔗 Link Detection</h3>
+                        <p>Analyzes URLs for suspicious patterns and phishing indicators</p>
+                    </div>
+                    <div class="highlight-card">
+                        <h3>📧 Email Analysis</h3>
+                        <p>Identifies fraudulent email content and spoofing attempts</p>
+                    </div>
+                    <div class="highlight-card">
+                        <h3>🖼️ Image Scanning</h3>
+                        <p>Detects phishing QR codes and malicious text in images</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Section -->
+        <div class="team-section">
+            <h2>Meet Our Team</h2>
+            <div class="team-grid">
+                <!-- Team Member 1 -->
+                <div class="team-member">
+                    <img src="samiksha.jpg" alt="Samiksha" class="member-photo">
+                    <div class="member-name">Samiksha</div>
+                    <div class="member-role">Team Lead</div>
+                    <p class="member-bio">Responsible for architecting the phishing detection engine and overseeing the project strategy. Passionate about cybersecurity and machine learning.</p>
+                </div>
+
+                <!-- Team Member 2 -->
+                <div class="team-member">
+                    <img src="reva.jpg" alt="Reva" class="member-photo">
+                    <div class="member-name">Reva</div>
+                    <div class="member-role">Frontend Developer</div>
+                    <p class="member-bio">Designed and built the user interface with focus on accessibility and user experience. Ensures the tool is intuitive and easy to use.</p>
+                </div>
+
+                <!-- Team Member 3 -->
+                <div class="team-member">
+                    <img src="labh.jpg" alt="Labh" class="member-photo">
+                    <div class="member-name">Labh</div>
+                    <div class="member-role">Machine Learning Engineer</div>
+                    <p class="member-bio">Developed the ML models for phishing detection. Focused on improving accuracy and reducing false positives in threat detection.</p>
+                </div>
+
+                <!-- Team Member 4 -->
+                <div class="team-member">
+                    <img src="vansh.jpg" alt="Vansh" class="member-photo">
+                    <div class="member-name">Vansh</div>
+                    <div class="member-role">Backend Developer</div>
+                    <p class="member-bio">Researched phishing techniques and threat patterns. Ensures the detection system stays updated with the latest attack methods.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p class="institution">Yeshwantrao Chavan College of Engineering (YCCE)</p>
+            <p>Nagpur, India</p>
+            <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">© 2026 PhishGuard. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
