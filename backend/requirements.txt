@@ -1,4 +1,4 @@
-"fastapi[standard]"
+fastapi[standard]
 numpy
 python-whois
 transformers
@@ -9,3 +9,4 @@ torch
 pytesseract
 opencv-python
 pillow
+groq
