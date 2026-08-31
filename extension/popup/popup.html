@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phishing Detector - AI Shield</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L3 6V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V6L12 2Z" fill="url(#shieldGrad)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+            <path d="M12 6L14.5 11H18L15 13.5L16.5 18L12 15L7.5 18L9 13.5L6 11H9.5L12 6Z" fill="#FFFFFF" opacity="0.9"/>
+            <defs>
+              <linearGradient id="shieldGrad" x1="3" y1="2" x2="21" y2="23" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#3B82F6"/>
+                <stop offset="1" stop-color="#1D4ED8"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>AI Phishing Shield</h1>
+          <span class="model-badge">AI Phishing Detection Engine</span>
+        </div>
+      </div>
+      <button id="settingsBtn" class="icon-btn" title="Extension Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="activeTab">Current Site</button>
+      <button class="tab-btn" data-tab="scannerTab">URL Scanner</button>
+      <button class="tab-btn" data-tab="whitelistTab">Whitelist</button>
+    </nav>
+
+    <!-- TAB 1: Current Active Site Analysis -->
+    <section id="activeTab" class="tab-content active">
+      <!-- Main Traffic Light Status Display -->
+      <div id="statusCard" class="status-card status-loading">
+        <!-- Dual Traffic Light Indicator -->
+        <div class="traffic-light-container">
+          <div class="traffic-light-housing">
+            <div id="lightRed" class="traffic-bulb light-red" title="Phishing Danger Signal"></div>
+            <div id="lightGreen" class="traffic-bulb light-green" title="Safe Signal"></div>
+          </div>
+        </div>
+
+        <div class="status-details">
+          <div id="statusBadge" class="status-badge">EVALUATING SITE</div>
+          <h2 id="statusTitle">Scanning Website...</h2>
+          <div class="url-chip">
+            <span id="urlDisplay">https://...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phishing Risk Percentage Meter -->
+      <div class="card risk-card">
+        <div class="risk-header">
+          <span class="risk-label">Phishing Probability Score</span>
+          <span id="riskPercent" class="risk-value">--%</span>
+        </div>
+        <div class="meter-bar-track">
+          <div id="riskMeterFill" class="meter-bar-fill" style="width: 0%;"></div>
+        </div>
+        <div class="risk-scale">
+          <span>0% (Safe)</span>
+          <span id="thresholdMarker">50% Threshold</span>
+          <span>100% (Phishing)</span>
+        </div>
+      </div>
+
+      <!-- Risk Factors & Model Analysis -->
+      <div class="card breakdown-card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Safety Signals & Model Output</span>
+        </div>
+        <div id="reasonsList" class="reasons-list">
+          <div class="reason-item neutral">
+            <span>• Running AI Security Model inference...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-row">
+        <button id="rescanBtn" class="btn btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Re-Scan URL
+        </button>
+        <button id="whitelistToggleBtn" class="btn btn-outline">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Trust Domain
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 2: Manual URL Scanner -->
+    <section id="scannerTab" class="tab-content">
+      <div class="card scan-input-card">
+        <label for="customUrlInput" class="form-label">Enter any URL to test:</label>
+        <div class="input-group">
+          <input type="text" id="customUrlInput" placeholder="e.g. https://login.paypal.verify-account.com/login" autocomplete="off">
+          <button id="runScanBtn" class="btn btn-primary">Scan URL</button>
+        </div>
+      </div>
+
+      <div id="scanResultCard" class="card scan-result-card hidden">
+        <div class="scan-result-header">
+          <div id="scanResultBadge" class="status-badge">RESULT</div>
+          <span id="scanScoreText" class="scan-score">--% Risk</span>
+        </div>
+        <p id="scanUrlText" class="url-text"></p>
+        <div id="scanReasonsList" class="reasons-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Whitelist Manager -->
+    <section id="whitelistTab" class="tab-content">
+      <div class="card">
+        <div class="card-title">Trusted Whitelisted Domains</div>
+        <p class="card-subtitle">Domains on this list will automatically bypass phishing alerts.</p>
+
+        <div class="input-group mb-12">
+          <input type="text" id="newWhitelistInput" placeholder="e.g. company.com">
+          <button id="addWhitelistBtn" class="btn btn-secondary">Add</button>
+        </div>
+
+        <ul id="whitelistItems" class="whitelist-items">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Extension Settings</h2>
+          <button id="closeSettingsBtn" class="icon-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label class="setting-label">Phishing Threshold Sensitivity</label>
+            <div class="slider-row">
+              <input type="range" id="thresholdSlider" min="30" max="80" value="50" step="5">
+              <span id="thresholdValueText">50%</span>
+            </div>
+            <p class="setting-desc">Lower threshold = more sensitive warnings. Higher threshold = stricter phishing requirements.</p>
+          </div>
+
+          <div class="setting-group checkbox-group">
+            <label for="bannerToggle" class="checkbox-label">
+              <input type="checkbox" id="bannerToggle" checked>
+              <span>Show In-Page Phishing Alert Banner on flagged sites</span>
+            </label>
+          </div>
+
+          <div class="setting-group info-box">
+            <h4>AI Model Details</h4>
+            <p>Model: <strong>AI Security Classification Model</strong></p>
+            <p>Engine: Local ONNX WebAssembly (WASM)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
