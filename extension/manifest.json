@@ -47,7 +47,10 @@
       "resources": [
         "models/*",
         "lib/*",
-        "icons/*"
+        "icons/*",
+        "blocked.html",
+        "blocked.css",
+        "blocked.js"
       ],
       "matches": ["<all_urls>"]
     }

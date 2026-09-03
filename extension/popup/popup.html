@@ -28,7 +28,7 @@
         </div>
         <div class="brand-text">
           <h1>AI Phishing Shield</h1>
-          <span class="model-badge">AI Phishing Detection Engine</span>
+          <span class="model-badge">AI Phishing Detection & Protection</span>
         </div>
       </div>
       <button id="settingsBtn" class="icon-btn" title="Extension Settings">
@@ -44,6 +44,7 @@
       <button class="tab-btn active" data-tab="activeTab">Current Site</button>
       <button class="tab-btn" data-tab="scannerTab">URL Scanner</button>
       <button class="tab-btn" data-tab="whitelistTab">Whitelist</button>
+      <button class="tab-btn" data-tab="blockedTab">Blocked Sites</button>
     </nav>
 
     <!-- TAB 1: Current Active Site Analysis -->
@@ -102,6 +103,13 @@
 
       <!-- Action Buttons -->
       <div class="action-row">
+        <button id="blockToggleBtn" class="btn btn-danger hidden">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Block Website
+        </button>
         <button id="rescanBtn" class="btn btn-secondary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -150,6 +158,23 @@
         </div>
 
         <ul id="whitelistItems" class="whitelist-items">
+          <!-- Dynamically populated -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- TAB 4: Blocked Sites Manager -->
+    <section id="blockedTab" class="tab-content">
+      <div class="card">
+        <div class="card-title">Blocked Websites</div>
+        <p class="card-subtitle">Websites on this list will be prevented from loading and redirected to the security warning page.</p>
+
+        <div class="input-group mb-12">
+          <input type="text" id="newBlockedInput" placeholder="e.g. deceptive-bank.com">
+          <button id="addBlockedBtn" class="btn btn-danger">Block</button>
+        </div>
+
+        <ul id="blockedItems" class="whitelist-items">
           <!-- Dynamically populated -->
         </ul>
       </div>

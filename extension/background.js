@@ -16,9 +16,12 @@ const DEFAULT_SETTINGS = {
 
 // Ensure settings & offscreen document are pre-warmed immediately on background startup
 chrome.runtime.onInstalled.addListener(async () => {
-  const existing = await chrome.storage.local.get(['settings']);
+  const existing = await chrome.storage.local.get(['settings', 'blockedDomains']);
   if (!existing.settings) {
     await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
+  }
+  if (!existing.blockedDomains) {
+    await chrome.storage.local.set({ blockedDomains: [] });
   }
   ensureOffscreenDocument();
 });
@@ -49,6 +52,19 @@ function isDomainWhitelisted(url, whitelist) {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
     return whitelist.some(domain => {
+      const d = domain.trim().toLowerCase();
+      return d && (hostname === d || hostname.endsWith('.' + d));
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+function isDomainBlocked(url, blockedList) {
+  if (!url || !blockedList || blockedList.length === 0) return false;
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return blockedList.some(domain => {
       const d = domain.trim().toLowerCase();
       return d && (hostname === d || hostname.endsWith('.' + d));
     });
@@ -168,8 +184,28 @@ async function analyzeTabUrl(tabId, url) {
     return result;
   }
 
-  const { settings } = await chrome.storage.local.get(['settings']);
+  const { settings, blockedDomains = [] } = await chrome.storage.local.get(['settings', 'blockedDomains']);
   const currentSettings = settings || DEFAULT_SETTINGS;
+
+  // Check if domain is blocked by user
+  if (isDomainBlocked(url, blockedDomains)) {
+    updateBadge(tabId, 'BLOCK', '#EF4444', 'icons/icon_danger48.png');
+    const result = {
+      url,
+      isBlocked: true,
+      isPhishing: true,
+      phishingScore: 0.99,
+      status: 'BLOCKED',
+      reasons: ['Website blocked by user after phishing warning']
+    };
+    tabAnalysisCache.set(tabId, result);
+
+    const blockedPageUrl = chrome.runtime.getURL(
+      `blocked.html?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(new URL(url).hostname)}&score=0.99`
+    );
+    chrome.tabs.update(tabId, { url: blockedPageUrl }).catch(() => {});
+    return result;
+  }
 
   if (isDomainWhitelisted(url, currentSettings.whitelist || [])) {
     updateBadge(tabId, 'TRUST', '#3B82F6', 'icons/icon_safe48.png');
@@ -298,6 +334,81 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       sendResponse(cached);
+    });
+    return true;
+  }
+
+  if (message.action === 'BLOCK_DOMAIN') {
+    (async () => {
+      try {
+        let domainToBlock = message.domain;
+        if (!domainToBlock && message.url) {
+          domainToBlock = new URL(message.url).hostname;
+        }
+        if (domainToBlock) domainToBlock = domainToBlock.toLowerCase();
+
+        if (!domainToBlock) {
+          sendResponse({ success: false, error: 'No domain provided' });
+          return;
+        }
+
+        const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+        if (!blockedDomains.includes(domainToBlock)) {
+          blockedDomains.push(domainToBlock);
+          await chrome.storage.local.set({ blockedDomains });
+        }
+
+        const redirectUrl = chrome.runtime.getURL(
+          `blocked.html?url=${encodeURIComponent(message.url || '')}&domain=${encodeURIComponent(domainToBlock)}&score=${encodeURIComponent(message.score || '0.90')}&reasons=${encodeURIComponent(JSON.stringify(message.reasons || []))}`
+        );
+
+        const targetTabId = message.tabId || (sender && sender.tab ? sender.tab.id : null);
+        if (targetTabId) {
+          updateBadge(targetTabId, 'BLOCK', '#EF4444', 'icons/icon_danger48.png');
+          chrome.tabs.update(targetTabId, { url: redirectUrl }).catch(() => {});
+        } else {
+          chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+            if (tabs && tabs[0]) {
+              updateBadge(tabs[0].id, 'BLOCK', '#EF4444', 'icons/icon_danger48.png');
+              chrome.tabs.update(tabs[0].id, { url: redirectUrl }).catch(() => {});
+            }
+          });
+        }
+
+        sendResponse({ success: true, blockedDomains });
+      } catch (err) {
+        console.error("Error blocking domain:", err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.action === 'UNBLOCK_DOMAIN') {
+    (async () => {
+      try {
+        let domainToUnblock = message.domain;
+        if (!domainToUnblock && message.url) {
+          domainToUnblock = new URL(message.url).hostname;
+        }
+        if (domainToUnblock) domainToUnblock = domainToUnblock.toLowerCase();
+
+        const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+        const updated = blockedDomains.filter(d => d.toLowerCase() !== domainToUnblock);
+        await chrome.storage.local.set({ blockedDomains: updated });
+
+        sendResponse({ success: true, blockedDomains: updated });
+      } catch (err) {
+        console.error("Error unblocking domain:", err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.action === 'GET_BLOCKED_DOMAINS') {
+    chrome.storage.local.get(['blockedDomains']).then(({ blockedDomains = [] }) => {
+      sendResponse({ blockedDomains });
     });
     return true;
   }

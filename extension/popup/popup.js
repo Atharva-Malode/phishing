@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const reasonsList = document.getElementById('reasonsList');
   const rescanBtn = document.getElementById('rescanBtn');
   const whitelistToggleBtn = document.getElementById('whitelistToggleBtn');
+  const blockToggleBtn = document.getElementById('blockToggleBtn');
 
   // Navigation
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -30,6 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const addWhitelistBtn = document.getElementById('addWhitelistBtn');
   const whitelistItems = document.getElementById('whitelistItems');
 
+  // Blocked Sites
+  const newBlockedInput = document.getElementById('newBlockedInput');
+  const addBlockedBtn = document.getElementById('addBlockedBtn');
+  const blockedItems = document.getElementById('blockedItems');
+
   // Settings
   const settingsBtn = document.getElementById('settingsBtn');
   const settingsModal = document.getElementById('settingsModal');
@@ -40,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentAnalysis = null;
   let activeTabUrl = "";
+  let activeTabHostname = "";
 
   // 1. Initialize Active Tab Analysis
   function loadActiveTabAnalysis() {
@@ -47,14 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetTabId = urlParams.get('tabId') ? parseInt(urlParams.get('tabId')) : null;
 
-    chrome.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS', tabId: targetTabId }, (response) => {
+    chrome.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS', tabId: targetTabId }, async (response) => {
       if (chrome.runtime.lastError || !response) {
         setStatusError("Unable to analyze current page");
         return;
       }
       currentAnalysis = response;
       activeTabUrl = response.url || "";
-      renderAnalysis(response);
+      try {
+        activeTabHostname = new URL(activeTabUrl).hostname.toLowerCase();
+      } catch (e) {
+        activeTabHostname = "";
+      }
+      await renderAnalysis(response);
     });
   }
 
@@ -69,7 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
     riskPercent.textContent = '--%';
     riskMeterFill.style.width = '0%';
     riskMeterFill.style.backgroundColor = '#3B82F6';
-    reasonsList.innerHTML = '<div class="reason-item neutral"><span>• Running pirocheto/phishing-url ONNX model...</span></div>';
+    if (blockToggleBtn) blockToggleBtn.classList.add('hidden');
+    reasonsList.innerHTML = '<div class="reason-item neutral"><span>• Running AI Security ONNX Model...</span></div>';
   }
 
   function setStatusError(msg) {
@@ -81,14 +94,40 @@ document.addEventListener('DOMContentLoaded', () => {
     urlDisplay.textContent = activeTabUrl || 'Local browser tab';
     riskPercent.textContent = '0%';
     riskMeterFill.style.width = '0%';
+    if (blockToggleBtn) blockToggleBtn.classList.add('hidden');
     reasonsList.innerHTML = '<div class="reason-item neutral"><span>• Internal browser tab cannot be scanned.</span></div>';
   }
 
   // Render Green Light vs Red Light
-  function renderAnalysis(data) {
+  async function renderAnalysis(data) {
     if (data.isSkipped) {
       setStatusError("Chrome System Page");
       urlDisplay.textContent = data.url;
+      return;
+    }
+
+    const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+    const isDomainInBlockedList = activeTabHostname && blockedDomains.includes(activeTabHostname);
+
+    if (data.isBlocked || isDomainInBlockedList) {
+      statusCard.className = 'status-card status-danger';
+      lightRed.classList.add('active');
+      lightGreen.classList.remove('active');
+      statusBadge.textContent = 'WEBSITE BLOCKED';
+      statusTitle.textContent = 'Access is Blocked';
+      urlDisplay.textContent = data.url;
+      riskPercent.textContent = '100%';
+      riskPercent.style.color = '#EF4444';
+      riskMeterFill.style.width = '100%';
+      riskMeterFill.style.backgroundColor = '#EF4444';
+
+      if (blockToggleBtn) {
+        blockToggleBtn.classList.remove('hidden');
+        blockToggleBtn.textContent = 'Unblock Website';
+        blockToggleBtn.className = 'btn btn-secondary';
+      }
+
+      reasonsList.innerHTML = '<div class="reason-item negative"><span>⚠️ Website is on your Blocked List to prevent phishing and fraud.</span></div>';
       return;
     }
 
@@ -103,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       riskMeterFill.style.width = '0%';
       riskMeterFill.style.backgroundColor = '#3B82F6';
       whitelistToggleBtn.textContent = 'Remove Trust';
+      if (blockToggleBtn) blockToggleBtn.classList.add('hidden');
       reasonsList.innerHTML = '<div class="reason-item positive"><span>✓ Domain is manually added to your trusted whitelist.</span></div>';
       return;
     }
@@ -123,6 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
       statusTitle.textContent = 'Phishing Threat Detected!';
       riskMeterFill.style.backgroundColor = '#EF4444';
       riskPercent.style.color = '#EF4444';
+
+      if (blockToggleBtn) {
+        blockToggleBtn.classList.remove('hidden');
+        blockToggleBtn.textContent = 'Block Website';
+        blockToggleBtn.className = 'btn btn-danger';
+      }
     } else {
       // 🟢 GREEN TRAFFIC LIGHT ACTIVE
       statusCard.className = 'status-card status-safe';
@@ -132,6 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
       statusTitle.textContent = 'Safe Website Verified';
       riskMeterFill.style.backgroundColor = '#10B981';
       riskPercent.style.color = '#10B981';
+
+      if (blockToggleBtn) {
+        blockToggleBtn.classList.add('hidden');
+      }
     }
 
     // Populate Safety Reasons
@@ -161,6 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tabContents.forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'blockedTab') {
+        loadBlockedUI();
+      }
     });
   });
 
@@ -175,17 +229,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 4. Whitelist Domain Toggle Button
+  // 4. Block / Unblock Toggle Button in Active Tab
+  if (blockToggleBtn) {
+    blockToggleBtn.addEventListener('click', async () => {
+      if (!activeTabHostname) return;
+      const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+      const isBlocked = blockedDomains.includes(activeTabHostname);
+
+      if (isBlocked) {
+        chrome.runtime.sendMessage({
+          action: 'UNBLOCK_DOMAIN',
+          domain: activeTabHostname,
+          url: activeTabUrl
+        }, () => {
+          loadActiveTabAnalysis();
+          loadBlockedUI();
+        });
+      } else {
+        chrome.runtime.sendMessage({
+          action: 'BLOCK_DOMAIN',
+          domain: activeTabHostname,
+          url: activeTabUrl,
+          score: currentAnalysis ? currentAnalysis.phishingScore : 0.9,
+          reasons: currentAnalysis ? currentAnalysis.reasons : []
+        }, () => {
+          loadActiveTabAnalysis();
+          loadBlockedUI();
+        });
+      }
+    });
+  }
+
+  // 5. Whitelist Domain Toggle Button
   whitelistToggleBtn.addEventListener('click', async () => {
     if (!activeTabUrl) return;
     try {
-      const hostname = new URL(activeTabUrl).hostname;
+      const hostname = new URL(activeTabUrl).hostname.toLowerCase();
       const { settings } = await chrome.storage.local.get(['settings']);
       const currentSettings = settings || { whitelist: [] };
       let list = currentSettings.whitelist || [];
 
       if (currentAnalysis && currentAnalysis.isWhitelisted) {
-        list = list.filter(d => d.toLowerCase() !== hostname.toLowerCase());
+        list = list.filter(d => d.toLowerCase() !== hostname);
       } else {
         if (!list.includes(hostname)) list.push(hostname);
       }
@@ -199,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 5. Manual URL Scanner
+  // 6. Manual URL Scanner
   runScanBtn.addEventListener('click', () => {
     const inputUrl = customUrlInput.value.trim();
     if (!inputUrl) return;
@@ -236,11 +321,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 6. Whitelist Manager
+  // 7. Whitelist Manager
   async function loadWhitelistUI(list) {
     const { settings } = await chrome.storage.local.get(['settings']);
     const domains = list || (settings ? settings.whitelist : []) || [];
     whitelistItems.innerHTML = '';
+
+    if (domains.length === 0) {
+      whitelistItems.innerHTML = '<li class="empty-list-msg">No domains currently in whitelist.</li>';
+      return;
+    }
 
     domains.forEach(domain => {
       const li = document.createElement('li');
@@ -281,7 +371,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 7. Settings Modal
+  // 8. Blocked Sites Manager
+  async function loadBlockedUI() {
+    const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+    blockedItems.innerHTML = '';
+
+    if (blockedDomains.length === 0) {
+      blockedItems.innerHTML = '<li class="empty-list-msg">No websites currently blocked.</li>';
+      return;
+    }
+
+    blockedDomains.forEach(domain => {
+      const li = document.createElement('li');
+      li.className = 'whitelist-item blocked-item';
+      li.innerHTML = `
+        <div class="blocked-item-info">
+          <span class="blocked-dot"></span>
+          <span>${domain}</span>
+        </div>
+        <button class="remove-blocked-btn" data-domain="${domain}" title="Unblock domain">Unblock</button>
+      `;
+      blockedItems.appendChild(li);
+    });
+
+    document.querySelectorAll('.remove-blocked-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const dom = e.target.getAttribute('data-domain');
+        chrome.runtime.sendMessage({ action: 'UNBLOCK_DOMAIN', domain: dom }, () => {
+          loadBlockedUI();
+          loadActiveTabAnalysis();
+        });
+      });
+    });
+  }
+
+  if (addBlockedBtn) {
+    addBlockedBtn.addEventListener('click', () => {
+      let dom = newBlockedInput.value.trim().toLowerCase();
+      if (!dom) return;
+      try {
+        if (dom.startsWith('http')) dom = new URL(dom).hostname.toLowerCase();
+      } catch (e) {}
+
+      chrome.runtime.sendMessage({ action: 'BLOCK_DOMAIN', domain: dom }, () => {
+        newBlockedInput.value = '';
+        loadBlockedUI();
+        loadActiveTabAnalysis();
+      });
+    });
+  }
+
+  // 9. Settings Modal
   settingsBtn.addEventListener('click', async () => {
     const { settings } = await chrome.storage.local.get(['settings']);
     if (settings) {
@@ -320,4 +460,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial loads
   loadActiveTabAnalysis();
   loadWhitelistUI();
+  loadBlockedUI();
 });
