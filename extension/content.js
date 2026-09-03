@@ -1,11 +1,12 @@
 // Injected content script for rendering interactive phishing blocking prompt & indicators
 (function () {
+  const extAPI = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome : (typeof browser !== 'undefined' ? browser : window);
   let rootContainer = null;
   let currentAnalysis = null;
   let userDismissedWarning = false;
 
   // Listen for messages from background script
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  extAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'SHOW_PHISHING_WARNING' && message.data) {
       currentAnalysis = message.data;
       if (!userDismissedWarning || !message.data.isPhishing) {
@@ -18,7 +19,7 @@
   // Query tab analysis as soon as DOM is ready
   function initTabAnalysis() {
     try {
-      chrome.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS' }, (response) => {
+      extAPI.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS' }, (response) => {
         if (response && !response.isSkipped && !response.error) {
           currentAnalysis = response;
           renderTooltipWidget(response);

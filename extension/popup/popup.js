@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const extAPI = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome : (typeof browser !== 'undefined' ? browser : window);
+
   // UI Elements
   const statusCard = document.getElementById('statusCard');
   const lightRed = document.getElementById('lightRed');
@@ -54,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const targetTabId = urlParams.get('tabId') ? parseInt(urlParams.get('tabId')) : null;
 
-    chrome.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS', tabId: targetTabId }, async (response) => {
-      if (chrome.runtime.lastError || !response) {
+    extAPI.runtime.sendMessage({ action: 'GET_TAB_ANALYSIS', tabId: targetTabId }, async (response) => {
+      if (extAPI.runtime.lastError || !response) {
         setStatusError("Unable to analyze current page");
         return;
       }
@@ -101,12 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render Green Light vs Red Light
   async function renderAnalysis(data) {
     if (data.isSkipped) {
-      setStatusError("Chrome System Page");
+      setStatusError("System Page");
       urlDisplay.textContent = data.url;
       return;
     }
 
-    const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+    const { blockedDomains = [] } = await extAPI.storage.local.get(['blockedDomains']);
     const isDomainInBlockedList = activeTabHostname && blockedDomains.includes(activeTabHostname);
 
     if (data.isBlocked || isDomainInBlockedList) {
@@ -221,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Re-analyze Button
   rescanBtn.addEventListener('click', () => {
     setStatusLoading();
-    chrome.runtime.sendMessage({ action: 'RE_ANALYZE_TAB' }, (response) => {
+    extAPI.runtime.sendMessage({ action: 'RE_ANALYZE_TAB' }, (response) => {
       if (response) {
         currentAnalysis = response;
         renderAnalysis(response);
@@ -233,11 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (blockToggleBtn) {
     blockToggleBtn.addEventListener('click', async () => {
       if (!activeTabHostname) return;
-      const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+      const { blockedDomains = [] } = await extAPI.storage.local.get(['blockedDomains']);
       const isBlocked = blockedDomains.includes(activeTabHostname);
 
       if (isBlocked) {
-        chrome.runtime.sendMessage({
+        extAPI.runtime.sendMessage({
           action: 'UNBLOCK_DOMAIN',
           domain: activeTabHostname,
           url: activeTabUrl
@@ -246,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
           loadBlockedUI();
         });
       } else {
-        chrome.runtime.sendMessage({
+        extAPI.runtime.sendMessage({
           action: 'BLOCK_DOMAIN',
           domain: activeTabHostname,
           url: activeTabUrl,
@@ -265,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!activeTabUrl) return;
     try {
       const hostname = new URL(activeTabUrl).hostname.toLowerCase();
-      const { settings } = await chrome.storage.local.get(['settings']);
+      const { settings } = await extAPI.storage.local.get(['settings']);
       const currentSettings = settings || { whitelist: [] };
       let list = currentSettings.whitelist || [];
 
@@ -276,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       currentSettings.whitelist = list;
-      await chrome.storage.local.set({ settings: currentSettings });
+      await extAPI.storage.local.set({ settings: currentSettings });
       loadWhitelistUI(list);
       loadActiveTabAnalysis();
     } catch (e) {
@@ -295,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scanUrlText.textContent = inputUrl;
     scanReasonsList.innerHTML = '<div class="reason-item neutral"><span>• Evaluating target URL...</span></div>';
 
-    chrome.runtime.sendMessage({ action: 'SCAN_CUSTOM_URL', url: inputUrl }, (response) => {
+    extAPI.runtime.sendMessage({ action: 'SCAN_CUSTOM_URL', url: inputUrl }, (response) => {
       if (!response) return;
       const scorePct = Math.round((response.phishingScore || 0) * 100);
       scanScoreText.textContent = `${scorePct}% Risk`;
@@ -323,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 7. Whitelist Manager
   async function loadWhitelistUI(list) {
-    const { settings } = await chrome.storage.local.get(['settings']);
+    const { settings } = await extAPI.storage.local.get(['settings']);
     const domains = list || (settings ? settings.whitelist : []) || [];
     whitelistItems.innerHTML = '';
 
@@ -346,10 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', async (e) => {
         const dom = e.target.getAttribute('data-domain');
         const updated = domains.filter(d => d !== dom);
-        const { settings: curSettings } = await chrome.storage.local.get(['settings']);
+        const { settings: curSettings } = await extAPI.storage.local.get(['settings']);
         if (curSettings) {
           curSettings.whitelist = updated;
-          await chrome.storage.local.set({ settings: curSettings });
+          await extAPI.storage.local.set({ settings: curSettings });
         }
         loadWhitelistUI(updated);
         loadActiveTabAnalysis();
@@ -360,11 +362,11 @@ document.addEventListener('DOMContentLoaded', () => {
   addWhitelistBtn.addEventListener('click', async () => {
     const dom = newWhitelistInput.value.trim().toLowerCase();
     if (!dom) return;
-    const { settings } = await chrome.storage.local.get(['settings']);
+    const { settings } = await extAPI.storage.local.get(['settings']);
     const curSettings = settings || { whitelist: [] };
     if (!curSettings.whitelist.includes(dom)) {
       curSettings.whitelist.push(dom);
-      await chrome.storage.local.set({ settings: curSettings });
+      await extAPI.storage.local.set({ settings: curSettings });
       newWhitelistInput.value = '';
       loadWhitelistUI(curSettings.whitelist);
       loadActiveTabAnalysis();
@@ -373,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 8. Blocked Sites Manager
   async function loadBlockedUI() {
-    const { blockedDomains = [] } = await chrome.storage.local.get(['blockedDomains']);
+    const { blockedDomains = [] } = await extAPI.storage.local.get(['blockedDomains']);
     blockedItems.innerHTML = '';
 
     if (blockedDomains.length === 0) {
@@ -397,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.remove-blocked-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const dom = e.target.getAttribute('data-domain');
-        chrome.runtime.sendMessage({ action: 'UNBLOCK_DOMAIN', domain: dom }, () => {
+        extAPI.runtime.sendMessage({ action: 'UNBLOCK_DOMAIN', domain: dom }, () => {
           loadBlockedUI();
           loadActiveTabAnalysis();
         });
@@ -413,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dom.startsWith('http')) dom = new URL(dom).hostname.toLowerCase();
       } catch (e) {}
 
-      chrome.runtime.sendMessage({ action: 'BLOCK_DOMAIN', domain: dom }, () => {
+      extAPI.runtime.sendMessage({ action: 'BLOCK_DOMAIN', domain: dom }, () => {
         newBlockedInput.value = '';
         loadBlockedUI();
         loadActiveTabAnalysis();
@@ -423,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 9. Settings Modal
   settingsBtn.addEventListener('click', async () => {
-    const { settings } = await chrome.storage.local.get(['settings']);
+    const { settings } = await extAPI.storage.local.get(['settings']);
     if (settings) {
       thresholdSlider.value = Math.round((settings.threshold || 0.50) * 100);
       thresholdValueText.textContent = `${thresholdSlider.value}%`;
@@ -441,19 +443,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   thresholdSlider.addEventListener('change', async () => {
-    const { settings } = await chrome.storage.local.get(['settings']);
+    const { settings } = await extAPI.storage.local.get(['settings']);
     if (settings) {
       settings.threshold = parseFloat(thresholdSlider.value) / 100.0;
-      await chrome.storage.local.set({ settings });
+      await extAPI.storage.local.set({ settings });
       loadActiveTabAnalysis();
     }
   });
 
   bannerToggle.addEventListener('change', async () => {
-    const { settings } = await chrome.storage.local.get(['settings']);
+    const { settings } = await extAPI.storage.local.get(['settings']);
     if (settings) {
       settings.enableBanner = bannerToggle.checked;
-      await chrome.storage.local.set({ settings });
+      await extAPI.storage.local.set({ settings });
     }
   });
 

@@ -18,15 +18,24 @@
     "default_title": "Phishing Detector"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ai-phishing-shield@security.addon",
+      "strict_min_version": "109.0"
+    }
   },
   "permissions": [
     "tabs",
     "activeTab",
     "webNavigation",
     "storage",
-    "offscreen",
     "scripting"
+  ],
+  "optional_permissions": [
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"

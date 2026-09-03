@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const extAPI = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome : (typeof browser !== 'undefined' ? browser : window);
   const urlParams = new URLSearchParams(window.location.search);
   const targetUrl = urlParams.get('url') || 'Unknown URL';
   const targetDomain = urlParams.get('domain') || extractDomain(targetUrl);
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   unblockBtn.addEventListener('click', () => {
     if (confirm(`Are you sure you want to unblock "${targetDomain}" and proceed? This site may be dangerous.`)) {
-      chrome.runtime.sendMessage({
+      extAPI.runtime.sendMessage({
         action: 'UNBLOCK_DOMAIN',
         domain: targetDomain,
         url: targetUrl
